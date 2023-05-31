@@ -1,0 +1,9 @@
+Name: Thu Nga Vu (Natalie)
+Lab 1
+
+Virtual memory is the extension of existing RAM that a program is allowed to use.
+This memory is more than the actual RAM available in the Operating system. This supports 
+the /proc folder because it's run on Virtual Memory.
+
+Resident memory is the actual memory that are stored in the physical RAM and available for the
+programs to use.
