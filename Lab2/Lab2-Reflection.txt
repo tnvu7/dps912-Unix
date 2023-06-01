@@ -1,0 +1,38 @@
+CC=g++
+--> Use C++ compiler
+
+CFLAGS=-I
+--> include directories for the compiler
+
+CFLAGS+=-Wall
+--> print warning messages during compilation
+
+CFLAGS+=-c
+--> compile the source code into an object file, independent from each other
+
+AR=ar
+--> use an archiver tool create and modify static libraries in Unix-like systems
+
+pidUtil: pidUtil.cpp
+    $(CC) $(CFLAGS) pidUtil.cpp -o pidUtil.o
+--> the target pidUtil depends on pidUtil.cpp. When the target is built, it will execute the 
+following command, and compiling the "pidUtil.cpp" into "pidUtil.o" object.
+
+lib: pidUtil.o
+    $(AR) rcs libPidUtil.a pidUtil.o
+--> the target lib depends on pidUtil.o. When the target is built, it will execute the 
+following command, and it uses the ar command to create a static library file named 
+libPidUtil.a, archiving the pidUtil.o object file into the library.
+
+clean:
+    rm -f *.o *.a
+--> remove all files that end with .o and .a. "-f" to force delete without prompt for confirmation.
+
+install:
+    cp libPidUtil.a ../.
+    cp pidUtil.h ../.
+--> the target is "install". Here it will copy the 2 files specified to the parent directory.
+
+all: pidUtil lib
+--> this target "all" depends on both "lib" and "pidUtil". It'll triggers both targets to build and 
+run corresponding scripts.
