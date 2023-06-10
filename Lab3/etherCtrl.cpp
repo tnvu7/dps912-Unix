@@ -51,17 +51,53 @@ int main()
 	cin >> selection;
 	switch(selection) {
         case 1:
-          // write your code for case1
-
+            if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
+                cout << strerror(errno) << endl;
+                close(fd);
+                break;
+            }
+            mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
+            cout << "Hardware address: ";
+            for (int i = 0; i < 6; ++i) {
+                cout << static_cast<int>(mac[i]);
+                if (i < 5) {
+                    cout << ":";
+                }
+            }
+            cout << endl;
             break;
         case 2:
-        // write your code for case2
+            if (ioctl(fd, SIOCGIFADDR, &ifr) == -1) {
+                cout << strerror(errno) << endl;
+                close(fd);
+                break;
+            }
+            addr = (sockaddr_in*)&ifr.ifr_addr;
+            char ip_address[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(addr->sin_addr), ip_address, INET_ADDRSTRLEN);
+            std::cout << "IP address: " << ip_address << std::endl;
             break;
         case 3:
-        // write your code for case3
+        if (ioctl(fd, SIOCGIFNETMASK, &ifr) == -1) {
+                cout << strerror(errno) << endl;
+                close(fd);
+                break;
+            }
+            addr = (sockaddr_in *)&ifr.ifr_netmask;
+            char network_mask[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(addr->sin_addr), network_mask, INET_ADDRSTRLEN);
+            cout << "Network mask: " << network_mask << endl;
             break;
         case 4:
-        // write your code for case4
+            if (ioctl(fd, SIOCGIFBRDADDR, &ifr) == -1) {
+                cout << strerror(errno) << endl;
+                close(fd);
+                break;
+            }
+            addr = (sockaddr_in *)&ifr.ifr_broadaddr;
+            char broadcast_address[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(addr->sin_addr), broadcast_address, INET_ADDRSTRLEN);
+            cout << "Broadcast address: " << broadcast_address << endl;
             break;
         }
 	if(selection!=0) {
