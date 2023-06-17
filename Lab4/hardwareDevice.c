@@ -20,7 +20,8 @@ MODULE_LICENSE("GPL");
 
 int register_device(void);
 void unregister_device(void);
-//TODO: Function prototypes for the read and ioctl functions
+static ssize_t hardware_device_read(struct file *filp, char __user *buf, size_t len, loff_t *off);
+static long hardware_device_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 static int hardware_device_open(struct inode *inode, struct file *file);
 static int hardware_device_close(struct inode *inode, struct file *file);
 
@@ -49,7 +50,8 @@ module_exit(hardware_device_exit);
 static struct file_operations simple_driver_fops =
 {
     .owner = THIS_MODULE,
-    //TODO: Function pointers for the read and ioctl functions
+    .read = hardware_device_read,
+    .unlocked_ioctl = hardware_device_ioctl,
     .open = hardware_device_open,
     .release = hardware_device_close,
 };
@@ -141,11 +143,28 @@ static int hardware_device_close(struct inode *inode, struct file *file)
 /*===============================================================================================*/
 static ssize_t hardware_device_read(struct file *filp, char __user *buf, size_t len, loff_t *off)
 {
-    //TODO: Implement the read function
+    int bytes_read = min(len, (size_t)BUF_LEN);
+    if (copy_to_user(buf, &buffer, bytes_read) != 0)
+        return -EFAULT;
+
+    return bytes_read;
 }
 
 /*===============================================================================================*/
 static long hardware_device_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-    //TODO: Implement the ioctl function
+    switch (cmd) {
+        case HARDWARE_DEVICE_HALT:
+            is_halt = true;
+            break;
+
+        case HARDWARE_DEVICE_RESUME:
+            is_halt = false;
+            break;
+
+        default:
+            return -ENOTTY;
+    }
+
+    return 0;
 }
