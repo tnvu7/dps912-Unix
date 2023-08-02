@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
         int child = fork();
         
         if (child < 0) {
-            cout << "server: " << strerror(errno) << endl;
+            cout << "server - Error fork child: " << strerror(errno) << endl;
             exit(-1);
         } else {
             cout << "DEBUG - server ppid: " << getpid() << endl;
@@ -92,22 +92,28 @@ int main(int argc, char *argv[]) {
     is_running = true;
     int numClients = 0;
 
-    while(numClients < 2) {
+    while(numClients < argc - 1) {
         //Create temporary file descriptor set
         fd_set activeSet = readfds;
 
-        ret = select(max_fd+1, &readfds, NULL, NULL, NULL);
+        if (select(max_fd+1, &readfds, NULL, NULL, NULL) == -1) {
+            cout << "server - Error: select " << strerror(errno) << endl;
+            unlink(socket_path);
+            close(master_fd);
+            exit(-1);
+        }
 
         //Incoming connection
         if(FD_ISSET(master_fd, &readfds)) {
             int clientSoc = accept(master_fd, NULL, NULL);
             if (clientSoc == -1) {
-                cout << "server: " << strerror(errno) << endl;
+                cout << "server - Error cannot accept client socket: " << strerror(errno) << endl;
                 unlink(socket_path);
                 close(master_fd);
                 exit(-1);
             }
             cout << "server: incoming connection " << clientSoc << endl;
+            FD_SET(clientSoc, &readfds);
             clients[numClients] = clientSoc;
             numClients++;
 
@@ -135,10 +141,14 @@ int main(int argc, char *argv[]) {
                 }
 
                 if (strcmp(buf, "Ready") == 0) {
-                    write(master_fd, "Monitor", sizeof("Monitor"));
+                    if (write(master_fd, "Monitor", sizeof("Monitor")) == -1) {
+                        cout << "server: Error writing" << endl;
+                    }
                 }
                 if (strcmp(buf, "Link Down") == 0) {
-                    write(master_fd, "Set Link Up", sizeof("Set Link Up"));
+                    if (write(master_fd, "Set Link Up", sizeof("Set Link Up")) == -1) {
+                        cout << "server: Error set link up" << endl;
+                    }
                 }
                 if (strcmp(buf, "Done") == 0)
                 {

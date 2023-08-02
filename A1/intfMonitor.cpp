@@ -122,6 +122,7 @@ int main(int argc, char *argv[]) {
     int bytes = read(fd, buf, sizeof(buf));
     
     if (bytes > 0 && strcmp(buf, "Monitor") == 0) {
+        cout << "DEBUG: Interface " + arg + ": " << buf << endl << endl;
         write(fd, "Monitoring", sizeof("Monitoring"));
         is_running=true;
     }
@@ -175,13 +176,12 @@ int main(int argc, char *argv[]) {
         var_name = GET_VARIABLE_NAME(tx_packets);
         tx_packets = stoi(get_statistics(file_path, var_name));
 
-        //TODO: Remove , check if + works for cout or use <<
-
         cout << "Interface: " + name + " state: " + operstate + " up_count: " + to_string(carrier_up_count) + " down_count: " + to_string(carrier_down_count) << endl;
         cout << "rx_bytes: " + to_string(rx_bytes) + " rx_dropped: " + to_string(rx_dropped) + " rx_errors: " + to_string(rx_errors) + " rx_packets: " + to_string(rx_packets) << endl;
         cout << "tx_bytes: " + to_string(tx_bytes) + " tx_dropped: " + to_string(tx_dropped) + " tx_errors: " + to_string(tx_errors) + " tx_packets: " + to_string(tx_packets) << endl << endl;
 
         if (operstate == "down") {
+            cout << "Interface: Link is down" << endl;
             write(fd, "Link Down", sizeof("Link Down"));
 
             int bytes = read(fd, buf, sizeof(buf));
