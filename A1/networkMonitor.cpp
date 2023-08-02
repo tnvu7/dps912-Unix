@@ -6,6 +6,9 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <vector>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
 
 using namespace std;
 
@@ -30,7 +33,7 @@ int main(int argc, char *argv[]) {
     int master_fd,max_fd = 0,clients[MAX_CLIENTS];
     fd_set readfds;
     int ret;
-    char buffer[BUF_LEN];
+    char buf[BUF_LEN];
 
     cout << "DEBUG - pid: " << getpid() << endl;
 
@@ -43,16 +46,18 @@ int main(int argc, char *argv[]) {
             cout << "server: " << strerror(errno) << endl;
             exit(-1);
         } else {
-            cout << "DEBUG - ppid: " << getpid() << endl;
+            cout << "DEBUG - server ppid: " << getpid() << endl;
             childPids.push_back(getpid());
+            cout << "DEBUG - server: execute " << argv[i] << endl;
             execl("./intfMonitor", argv[i], (char *)NULL);
         }
     }
 
     //Create the socket
+    cout << "DEBUG - server: create socket" << endl;
     memset(&addr, 0, sizeof(addr));
-    if ( (master_fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
-        cout << "server: " << strerror(errno) << endl;
+    if ( (master_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+        cout << "server - Error create master socket: " << strerror(errno) << endl;
         exit(-1);
     }
 
@@ -62,7 +67,7 @@ int main(int argc, char *argv[]) {
     unlink(socket_path);
 
     //Bind the socket to this local socket file
-    if (bind(master_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+    if (bind(master_fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == -1) {
         cout << "server: " << strerror(errno) << endl;
         close(master_fd);
         exit(-1);
@@ -70,7 +75,7 @@ int main(int argc, char *argv[]) {
 
     cout << "Waiting for the client..." << endl;
     //Listen for a client to connect to this local socket file
-    if (listen(master_fd, 2) == -1) {
+    if (listen(master_fd, argc - 1) == -1) {
         cout << "server: " << strerror(errno) << endl;
         unlink(socket_path);
         close(master_fd);
@@ -89,7 +94,7 @@ int main(int argc, char *argv[]) {
 
     while(numClients < 2) {
         //Create temporary file descriptor set
-        fd_set activeSet = readSet;
+        fd_set activeSet = readfds;
 
         ret = select(max_fd+1, &readfds, NULL, NULL, NULL);
 
@@ -122,23 +127,23 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i<MAX_CLIENTS; ++i) {
             int cl_soc = clients[i];
 
-            ret =  FD_ISSET(cl_soc, &readSet);
+            ret =  FD_ISSET(cl_soc, &readfds);
             if (ret!=0) {
-                int bytes = read(cl_soc, buf, sizeof(buffer));
+                int bytes = read(cl_soc, buf, sizeof(buf));
                 if (bytes < 0) {
                     continue;
                 }
 
-                if (strcmp(buffer, "Ready") == 0) {
-                    write(fd, "Monitor", sizeof("Monitor"));
+                if (strcmp(buf, "Ready") == 0) {
+                    write(master_fd, "Monitor", sizeof("Monitor"));
                 }
-                if (strcmp(buffer, "Link Down") == 0) {
-                    write(fd, "Set Link Up", sizeof("Set Link Up"));
+                if (strcmp(buf, "Link Down") == 0) {
+                    write(master_fd, "Set Link Up", sizeof("Set Link Up"));
                 }
-                if (strcmp(buffer, "Done") == 0)
+                if (strcmp(buf, "Done") == 0)
                 {
                     close(cl_soc);
-                    FD_CLR(cl_soc, &readSet);
+                    FD_CLR(cl_soc, &readfds);
                 }
             }
         }       
