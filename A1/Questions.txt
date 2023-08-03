@@ -1,0 +1,23 @@
+1. In a few sentences, describe the general architecture of your entire layout with the network monitor and interface monitors. 
+What does each do? [0.5 mark]
+    The network monitor and interface monitor both connect to each other through the same socket. One network monitor will create 
+multiple child processors. Each child processor called the interface Monitor, passing in the interface name as a parameter. 
+Once connected, the interface monitor will keep printing the statistics, and network monitor waits until further instructions 
+about link down and set link up to send to interface monitor.
+
+2. Could the interface monitor and network monitor all be contained within one process, if so how? [0.5 mark]
+    Yes it's possible. Instead of using the current socket, we will design a single software program that 
+combines the functionalities of both monitoring tasks. First monitor step is the Interface Monitor itself, where we use ioctl 
+to get statistics about the interface. Second monitor will be using threads or "libpcap" library to monitor the network traffic.
+
+3. Could the interface monitor and network monitor all be contained within one process, assuming 128 network interfaces running 
+at several Giga-bits per second, which require a polling interval of one millisecond per interface. [0.5 mark]
+    In this case, the required polling rate and the volume of data to be processed can become too demanding for a single process 
+to handle efficiently. 128 network interfaces will take up a lot of CPU time. Moreover, we have serveral Giga-bits per second, the 
+data volume to be analyzed in 1 process is too much. Therefore, it's better to deal with each network interface individually in threads,
+or in parallel. 
+
+4. What is a software defined network? In doing so, describe the applications layer, the control layer, and the forwarding layer. 
+    A Software-Defined Network separates network control from data forwarding (network devices). The Applications Layer provides 
+network services, the Control Layer manages the network through the SDN controller, and the Forwarding Layer handles packet 
+forwarding based on rules programmed by the controller.

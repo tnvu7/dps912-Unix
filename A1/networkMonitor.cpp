@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include <vector>
 #include <fcntl.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -39,16 +39,15 @@ int main(int argc, char *argv[]) {
 
     signal(SIGINT, sigHandler);
 
+    //Fork child processors
     for (int i = 1; i < argc; i++) {
         int child = fork();
         
-        if (child < 0) {
-            cout << "server - Error fork child: " << strerror(errno) << endl;
+        if (child == -1) {
+            cout << "Server - Error fork child: " << strerror(errno) << endl;
             exit(-1);
-        } else {
-            cout << "DEBUG - server ppid: " << getpid() << endl;
+        } else if (child == 0) {
             childPids.push_back(getpid());
-            cout << "DEBUG - server: execute " << argv[i] << endl;
             execl("./intfMonitor", argv[i], (char *)NULL);
         }
     }
@@ -96,7 +95,7 @@ int main(int argc, char *argv[]) {
         //Create temporary file descriptor set
         fd_set activeSet = readfds;
 
-        if (select(max_fd+1, &readfds, NULL, NULL, NULL) == -1) {
+        if (select(FD_SETSIZE, &activeSet, NULL, NULL, NULL) == -1) {
             cout << "server - Error: select " << strerror(errno) << endl;
             unlink(socket_path);
             close(master_fd);
@@ -104,7 +103,8 @@ int main(int argc, char *argv[]) {
         }
 
         //Incoming connection
-        if(FD_ISSET(master_fd, &readfds)) {
+        if(FD_ISSET(master_fd, &activeSet)) {
+            //Accept client's connection
             int clientSoc = accept(master_fd, NULL, NULL);
             if (clientSoc == -1) {
                 cout << "server - Error cannot accept client socket: " << strerror(errno) << endl;
@@ -112,14 +112,9 @@ int main(int argc, char *argv[]) {
                 close(master_fd);
                 exit(-1);
             }
-            cout << "server: incoming connection " << clientSoc << endl;
             FD_SET(clientSoc, &readfds);
             clients[numClients] = clientSoc;
             numClients++;
-
-            // Break the loop if we have reached the desired number of clients
-            // if (numClients == 2)
-            //     break;
         }
     }
 
@@ -129,26 +124,21 @@ int main(int argc, char *argv[]) {
         fcntl(clients[i], F_SETFL, O_NONBLOCK);
     }
 
+    //Keep running to wait for alert from clients, until user hit Ctrl C to terminate
     while(is_running) {
         for (int i = 0; i<MAX_CLIENTS; ++i) {
             int cl_soc = clients[i];
 
-            ret =  FD_ISSET(cl_soc, &readfds);
-            if (ret!=0) {
+            if (FD_ISSET(cl_soc, &readfds)) {
                 int bytes = read(cl_soc, buf, sizeof(buf));
                 if (bytes < 0) {
                     continue;
                 }
-
                 if (strcmp(buf, "Ready") == 0) {
-                    if (write(master_fd, "Monitor", sizeof("Monitor")) == -1) {
-                        cout << "server: Error writing" << endl;
-                    }
+                    write(cl_soc, "Monitor", sizeof("Monitor"));
                 }
                 if (strcmp(buf, "Link Down") == 0) {
-                    if (write(master_fd, "Set Link Up", sizeof("Set Link Up")) == -1) {
-                        cout << "server: Error set link up" << endl;
-                    }
+                    write(cl_soc, "Set Link Up", sizeof("Set Link Up"));
                 }
                 if (strcmp(buf, "Done") == 0)
                 {
@@ -159,6 +149,7 @@ int main(int argc, char *argv[]) {
         }       
     }
 
+    //Kill all child processors if user hit Ctrl C / terminate program
     if (!is_running) {
         for (int i = 0; i < childPids.size(); i++) {
             kill(childPids[i], SIGINT);
@@ -167,8 +158,10 @@ int main(int argc, char *argv[]) {
 
     unlink(socket_path);
     close(master_fd);
+    //Close all clients' connections
     for (int i = 0; i < numClients; ++i)
     {
+        cout << "Closing client's connection: " << clients[i] << endl;
         close(clients[i]);
     }
     
