@@ -1,0 +1,50 @@
+Unix A2
+1. Generally, what are syslog and rsyslog? Specifically, name three features of syslog/rsyslog and compare them to your embedded debug logging. Will there be any overlap of information?
+
+Syslog is a standard protocol used for sending and receiving log and event messages across a computer network. It's used for collecting and forwarding log messages from various devices and applications to a centralized logging server or system. Rsyslog is an enhanced and extended version of syslog, which has additional features and flexibility for log message processing, filtering, and forwarding.
+Three features of syslog/rsyslog:
+* Centralized Logging: Syslog and rsyslog allow for centralizing log data from multiple sources, making it easier to manage and analyze logs from various devices and applications in one location.
+* Facility and Severity Levels: Log messages can be categorized using facilities and severity levels, providing a structured way to prioritize and filter log events based on their importance.
+* Remote Logging: Both syslog and rsyslog support sending log messages over a network, allowing logs to be collected from remote devices and systems.
+My embedded debug logging can show off these three features of syslog and rsylog. Firstly, all the log data from multiple processes are stored into 1 log file in /tmp/A2LogFile. For each logging message, there is the date time and information. Secondly, by setting the log level, each log message are categorized into their severity levels. If we just want to see log messages of certain levels, our program can display that from the Log File. Lastly, we connect the server and client through UDP, which is a lightweight and fast protocol used for sending data over a network in a connectionless manner. UDP doesn’t establish a connection before sending the data, any remote client connect.
+
+2. Name five features of syslog-ng.
+
+* Log Path Routing: Syslog-ng allows us to route log messages based on various attributes, such as message content, source IP, or facility, to specific destinations or storage locations.
+* Flexible Message Parsing: It offers advanced message parsing capabilities, allowing you to extract structured data from log messages and perform actions based on that data.
+* Message Filtering: Syslog-ng enables fine-grained filtering of log messages, ensuring that only relevant logs are processed and forwarded.
+* Store and Forward: It can store log messages locally in case the remote log server is temporarily unavailable, ensuring no log data is lost.
+* Encryption and Compression: Syslog-ng supports encrypted and compressed log transfer, enhancing the security and efficiency of log data transmission.
+
+3. Name five ways syslog-ng is an improvement over syslog/rsyslog.
+
+- Support of TCP and TLS encryption: Syslog-ng comes with support for TCP and encrypting TLS. TCP gives a much more reliable log transfer than UDP because it requires a handshake and connection confirmation. That means that not everyone can write to a socket like in UDP. Some logs also contain highly sensitive information, so TLS encryption enhance data protection and reduce network overhead.
+- Simplier configuration: New configuration is clean, well-structured and can reuse resources, destinations, or filters. It’s also easier to maintain.
+- Extensibility / Flexibility: Support custom plugins and modules, which allow us to have more functionalities for logging and processing.
+- Reliability: syslog-ng improved reliability though local storage, buffering, and store-and-forward mechanisms to ensure log data integrity.
+- Ability to classify, tag, and correlate log messages in real time: makes it easy to apply complex filters to categorize logs to different destinations or drop logs that are unimportant.
+
+4. Consider a Log Server that has to manage embedded logs for a massive amount of processes on a massive amount of machines. Name three ways the server could manage the connections to each process.
+a. Port-based routing:
+    - Assign each process to a different port number, then use that to route log data to the appropriate log storage of analysis locations
+b. IP address
+    - Use the IP address of the log message to determine the origin of each process.
+c. Unique identifier
+    - Assign a unique identifier like an id to each process 
+
+5. Consider a Log Server that has to manage embedded logs for a massive amount of processes on a massive amount of machines. With such a large amount of data in the logs, name three ways a user could extract useful information from them (be general).
+    1. Search and Filtering
+        1. Use filter by keyword, date time, severity levels, error codes
+    2. Pattern Recognition
+        1. Identify recurring pattern of anomalies in log data to identify any trends or issues
+    3. Aggregation & Visualization
+        1. Similar to pattern, we can use the data to generate any graphs or visualization. This way we can see the trends, common behaviour and identify anomalies.
+
+6. Explain how gdb could be used on a Linux machine to attach to a process and get thread information. Is this also useful in debugging?
+GDB has the ability to debug individual threads, and examine them independently. 
+We first use gdb to compile the program: “gdb ./three-thread”
+Then we set breakpoint for each thread: “(gdb) break thread3”
+Once we run the program: (gdb) run
+We can use info threads to get a summary of the program’s threads and details about its current state. 
+In debugging, gdb’s nature is useful in debugging because we can debug individual threads and know where logs are coming from. 
+
