@@ -37,12 +37,13 @@ void* receiveFunction(void *arg) {
 
     setsockopt(thread_fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
 
+    ofstream logFile(log_path, ofstream::out | ofstream::app);
     while (is_running)
     {
         memset(buf, 0, BUF_LEN);
 
         pthread_mutex_lock(&lock_x);
-        ofstream logFile(log_path, ofstream::out | ofstream::app);
+        
         if (!logFile.is_open()) {
             std::cerr << "Error opening log file." << std::endl;
             exit(-1);
@@ -55,12 +56,12 @@ void* receiveFunction(void *arg) {
         } else {
             sleep(1);
         }
-        // Close the file when done
-        logFile.close();
+        
         // Unlock mutex
         pthread_mutex_unlock(&lock_x);
     }
-    //pthread_exit(NULL);
+    // Close the file when done
+    logFile.close();
 }
 
 
@@ -115,8 +116,7 @@ void setLogLevel(){
     int ret = sendto(fd, buf, len, 0, (struct sockaddr *)&client_addr, socketlen);
     
     if (ret < 0) {
-        cout << "ERROR: Send log to client " << buf << " " << strerror(errno) << endl;
-        exit(-1);
+        perror("ERROR: Send log to client");
     } else {
         cout << "Sent to client socket this log level: " << buf << endl;
     }
@@ -143,6 +143,7 @@ void dumpLogFile(){
 }
 
 int main(void) {
+    // register shut down handler to listen for Ctrl C
     signalRegister();
 
     // Create the socket
@@ -164,7 +165,6 @@ int main(void) {
     }
 
     fcntl(fd, F_SETFL, O_NONBLOCK);
-
     // Initialize mutex lock
     pthread_mutex_init(&lock_x, NULL);
 
@@ -197,7 +197,6 @@ int main(void) {
                 break;
             default:
                 cout << "Option not available. Please choose again" << endl;
-                break;
         }
     }
 

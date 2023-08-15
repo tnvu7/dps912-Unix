@@ -42,7 +42,6 @@ void* receiveFunction(void *arg) {
         pthread_mutex_lock(&lock_x);
         int msg_len = recvfrom(fd, buf, BUF_LEN, 0, (struct sockaddr *)&addr, &addrlen);
         string msg = buf;
-        cout << "logger-thread-buf: " << buf << endl;
         if (msg_len > 0) {
             string log = msg.substr((msg.find("=")+1));
             if (log == "DEBUG") {
@@ -61,7 +60,6 @@ void* receiveFunction(void *arg) {
         } else {
             sleep(1);
         }
-        cout << "g_level: " << endl;
         msg = "";
         // Unlock shared resources
         pthread_mutex_unlock(&lock_x);
@@ -69,7 +67,7 @@ void* receiveFunction(void *arg) {
     //pthread_exit(NULL);
 }
 
-void InitializeLog() {
+int InitializeLog() {
     // Create the socket
     fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (fd < 0)
@@ -77,6 +75,7 @@ void InitializeLog() {
             cout << "ERROR: Cannot create the socket: " << strerror(errno) << endl;
             exit(EXIT_FAILURE);
     }
+    memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(IP_ADDR);
     addr.sin_port = htons(PORT);
@@ -86,14 +85,15 @@ void InitializeLog() {
     // Initialize mutex lock
     pthread_mutex_init(&lock_x, NULL);
 
+    is_running = true;
     // Create receive thread for each process
     int createResult = pthread_create(&receiveThread, NULL, receiveFunction, &fd);
     if (createResult < 0) {
         cout << "ERROR: Cannot create thread: " << strerror(errno) << endl;
-        return;
+        return -1;
     }
 
-    is_running = true;
+    return 0;
 }
 void SetLogLevel(LOG_LEVEL level) {
     g_level = level;
@@ -104,10 +104,10 @@ void Log(LOG_LEVEL level, const char *prog, const char *func, int line, const ch
         char *dt = ctime(&now);
         memset(buf,0,BUF_LEN);
         char levelStr[][16]={"DEBUG", "WARNING", "ERROR", "CRITICAL"};
-        int d_len = sprintf(buf, "%s %s %s:%s:%d %s\n", dt, levelStr[level], prog, func, line, message)+1;
+        int d_len = sprintf(buf, "%s %s %s:%s:%d %s\n", dt, levelStr[level], prog, func, line, message) + 1;
         buf[d_len-1]='\0';
 
-        sendto(fd, buf, d_len, 0, (struct sockaddr *)&addr, addrlen);
+        sendto(fd, buf, d_len, 0, (struct sockaddr *)&addr, sizeof(addr));
     }
 }
 void ExitLog(){
